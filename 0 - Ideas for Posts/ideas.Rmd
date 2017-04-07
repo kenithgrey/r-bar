@@ -1,0 +1,25 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+#Ideas
+
+1. Things to do with do.call
+2. google and word cloud
+3. followup on control chart constants
+4. control charts and anova
+5. somthing about Tukey
+6. speed tests
+    1. recusives. 
+    1. applys
+    1. fors
+    1. vectorizations
+    1. rcpp
+7. contructing control charts with ggplot
+8. using ggproto to get it going
+9. a multi_level plot. 
+10. split-plots/hierarchacle designs and quality control 
+11. Exercies?
+12. R's Inf function and ggplot
+13. making a stat for x-bar and r plots

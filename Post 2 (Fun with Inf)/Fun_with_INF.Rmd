@@ -1,0 +1,104 @@
+---
+title: "Useful Things to do with R's **Inf** Keyword"
+output:
+  html_document: default
+  html_notebook: default
+---
+```{r, include=FALSE}
+require(ggplot2)
+```
+
+Having used R for some years now, I've come across a few instances where R's **Inf** keyword can be used to yield a practical outcome. For those unfamiliar with R's **Inf** keyword, it is defined as $\pm$ a number divided by zero, respectively yielding $\pm$ **Inf**.
+
+```{r definition of Inf}
+c(plus_inf = 1/0, minus_inf = -1/0)
+```
+
+Great, so how we can make practical use of infinity in R code? Two applications I've found are in R's *cut()* function and positioning text in ggplot at a corner or edge.
+
+#**Inf** in the *cut()* Function 
+
+Suppose you have a set of numbers and you want to bin them into discrete levels. For example, take the sequence {-100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000} and bin them into a factor with 5 levels.
+
+```{r using the cut() Function}
+numbers <- c(-100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000)
+bins <- cut(numbers, breaks = c(-101,-2,2,5,11, 1001))
+xtabs(~bins)
+```
+
+The above code explicitly shows how we might bin the data including the extrema (i.e, -100,100,1000). But If we are working with real data - extrama can change. For example, what if we received the following new pieces of data: -102 and 1002? Below, we've added them to our list and re-binned them into the 5 bins.  
+
+```{r using the Cut Function Not Robust}
+numbers <- c(-102, -100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000,1002)
+bins <- cut(numbers, breaks = c(-101,-2,2,5,11, 1001))
+xtabs(~bins)
+```
+
+In the result above, you see that the new data were not included in the binning. We would need to manually expand our limits, or we could perhaps do something clever with the *max* and *min* functions. Alternativly, we can solve this problem with R's $\pm$ **Inf** keyword by placing $\pm$ **Inf** in the *breaks* argument of the *cut* function (*see line 2 below*)
+
+
+```{r using the Cut Function with Infs}
+numbers <- c(-102, -100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000,1002)
+bins <- cut(numbers, breaks = c(-Inf,-2,2,5,11, Inf))
+xtabs(~bins)
+```
+
+Now, when new data is collected that is less than -2 or greater than 11 there will be a bin to catch it, no mater how big or small. 
+
+
+#Anchoring ggplot text at plot corners and edges with **Inf** 
+
+In the documentation for ggplot2 http://docs.ggplot2.org/current/geom_text.html <end of page> you are told you can position text in a plot in the following way.   
+
+```{r as shown by ggplot documentation}
+df <- data.frame(
+  x = c(1, 1, 2, 2),
+  y = c(1, 2, 1, 2),
+  text = c("bottom-left", "bottom-right", "top-left", "top-right")
+)
+
+ggplot(df, aes(x, y)) + geom_text(aes(label = text), vjust = "inward", hjust = "inward") 
+```
+
+Ok, this puts the text in the corners, but look what happens when we change the plot limits with *ylim()* and *xlim()*. 
+
+```{r not at the corners anymore}
+ggplot(df, aes(x, y)) + geom_text(aes(label = text), vjust = "inward", hjust = "inward") + 
+  ylim(-10,10) + xlim(-10,10)
+```
+
+Oops. The text is no longer in the corners. Using R's **Inf** keyword, we can achor the text in a simple, robust way to the corners and edges of a plot. Here is the plot again with original limits above using **Inf**. I've also placed some extra annotations in the middle of each side for demonstration.  
+
+```{r Using Inf to lock text at edges}
+gg_corner_edge_text <- ggplot(df, aes(x,y)) +  
+  annotate("text", label="Top Left",  x = -Inf, y=Inf, hjust=0, vjust=1) +
+  annotate("text", label="Bottom Left",  x = -Inf, y=-Inf, hjust=0, vjust=0)+
+  annotate("text", label="Top Right",  x = Inf, y=Inf, hjust=1, vjust=1) +
+  annotate("text", label="Bottom Right",  x = Inf, y=-Inf, hjust=1.1, vjust=-.7) +
+  
+  #### Placeing text at Top or Bottom Givben X 
+  annotate("text", label="Top Middle",  x=(max(df$x)+min(df$x))/2 , y=Inf, hjust=.5, vjust=1) +
+  annotate("text", label="Bottom Middle",  x=(max(df$x)+min(df$x))/2 , y=-Inf, hjust=.5, vjust=-.7) +  
+
+  #### Placeing text at Left or Right Side Given Y 
+  annotate("text", label="Right Middle", x=Inf , y=(max(df$y)+min(df$y))/2, hjust=.5, vjust=1, angle=-90) +
+  annotate("text", label="Left Middle",  x=-Inf , y=(max(df$y)+min(df$y))/2, hjust=.5, vjust=1, angle=90) 
+
+gg_corner_edge_text
+```
+
+Here is the same plot, except now we've expanded the limits with *xlim()* and *ylim()* as above to show that the text stays on the edges. 
+
+
+```{r SomeData}
+gg_corner_edge_text + ylim(-10,10) + xlim(-10,10)
+```
+
+Awesome! The text stayed in the corners, and center edge of each side. However, it is no longer centered correctly. At this point, I do not have a robust way to deal with centering, but the text is locked to the edges of the plot because of the **Inf** keyword. Fine adjustment to the alignment can be achieved with hjust and vjust agruments.
+
+
+#Summary
+
+In this brief post, we shown how to use R's **Inf** keyword to bin data using the *cut()* function and position text at the corners and edges of plots made with ggplot. 
+
+

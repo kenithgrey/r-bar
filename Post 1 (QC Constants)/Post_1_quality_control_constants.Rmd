@@ -1,0 +1,151 @@
+---
+title: "Estimating Control Chart Constants with R"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+```{r, include=FALSE}
+require(magrittr)
+require(microbenchmark)
+reps = 1e6
+seed = 5555
+```
+Aside -- If your in a pinch and just need to through some charts together, I've had good results with R's QCC package. 
+
+
+If you work in production or quality control, chances are you've made a control chart. But perhaps you're new to the field, and your boss has just asked you to pull together some control charts on process XYZ. If you're just learning about control charts, I highly recommend checking out *Understanding Statistical Process Control*, Wheeler et. al. to get a solid foundation. However, in a book such as this or searching the internet you will quickly encounter cryptic alpha-numeric designations like d2, A2, E2, d3, D3. These are not referring to note-octave pairs on a keyboard. These are constants that need to be plugged into formulas to determine your control limits, and each one will depend on your subgroup  size, n. 
+
+So where do these control constants come from and how are they calculated?  
+
+In this post, I will show you how a very basic Monte Carlo method can be used to estimate the quality control constants needed to construct X-Individuals, X-bar, and R charts. The value of this approach is that it gives you a mechanical sense of where these constants come from and some reinforcement on their application.
+
+##X-Bar and X-Individuals Constants
+Often, control charts represent variability in terms of the mean range, $\bar{R}$, observed in each subgroup rather than the mean standard deviation of each subgroup. Why range? My guess is that, historically, employees of all levels would have understood the concept of range. Range requires no special computation - just max-value minus the min-value. Speculation aside, we begin with the relationship that $\bar{R}$ is proportional to standard deviation of the individual values, $S(X_{indv})$. The proportionality constant between $\bar{R}$ and $S(X_{indv})$ is $d_{2}$, the first constant we'll be estimating. The relationship is expressed in **Eq.1**
+
+$$(Eq. 1) \ \ \bar{R}(X_{Sub\_Grp\_Indv}) = d_{2}S(X_{indv})$$
+
+To estimate $d_{2}$ for n = 2 (i.e, the group size is 2), we draw two samples from a normal distribution with mean = 0 and standard deviation = 1. Consider **Eg. 1**, if $S(X_{indv})=1$ then $\bar{R}(X_{Sub\_Grp\_Indv})=d_{2}$. For the two individuals sampled, the range is then determined. This process shown with pipes below is replicated 1 million times. The result is 1 million sub-group ranges of group size 2, that are then averaged together yielding $\bar{R}$ which is conviently equal to $d_{2}$, as coded below.       
+
+```{r d2 Processing Pipes vs NoPipes, include=FALSE}
+timing <- microbenchmark(
+d2 = mean(replicate(100, abs(diff(range(rnorm(2)))))),
+d2_pipes = replicate(100, 
+				 rnorm(n=2) %>% #Draw Two From the Normal Distibution 
+				 range() %>% #Determine the Range Vector = (Max, Min)
+				 diff() %>% #Determine the Difference of the Range Vector
+				 abs() #Take the Absolution Value to make sure the Result is positive
+	) %>% # Replicate the above proceedure 100,000 Times 
+	mean() 
+)
+timingDF <- summary(timing)
+Speed <- round(timingDF$mean[2]/timingDF$mean[1], 1)
+```
+
+```{r d2 With Pipes, cache=TRUE}
+require(magrittr)  #Bring in the Pipe Function
+set.seed(seed)	
+replicate(reps, 
+				 rnorm(n=2, mean = 0, sd = 1) %>% #Draw Two From the Normal Distibution 
+				 range() %>% #Determine the Range Vector = (Max, Min)
+				 diff() %>% #Determine the Difference of the Range Vector
+				 abs() #Take the Absolution Value to make sure the Result is positive
+	) %>% # Replicate the above proceedure 100,000 Times 
+	mean() -> R_BAR -> d2 #Take the mean of the 100,000 results
+
+d2
+```
+
+
+The pipes make the above code easy to read but slow things down quite a bit. The following code does the same thing about `r Speed` times faster. 
+
+```{r d2 without Pipes}
+set.seed(seed)
+d2 <- R_BAR <- mean(replicate(reps, abs(diff(range(rnorm(2))))))
+R_BAR  
+```
+
+
+Once you have $d_{2}$, calculating E2 ($3\sigma$ for the individuals) and A2 ($3\sigma$ for the sub-group means) is straight forward as shown in **Eq.2 - Eq.5**. A2 and E3 are the coefficients to the left of $\bar{R}$. 
+
+
+$$(Eq.2)\space\space \frac{3}{d_{2}}\bar{R}(X_{Sub\_Grp\_Indv}) =  3\bar{S}(X_{Indv}) \\ (Eq.3)\space\space \frac{3}{d_{2}\sqrt{n}}\bar{R}(X_{Sub\_Grp\_Indv}) =  \frac{3\bar{S}(X_{Indv})}{\sqrt{n}} $$
+$$(Eq.4)\space\space E2 = \frac{3}{d_{2}} \\ (Eq.5) \ \ A2=\frac{3}{d_{2}\sqrt{n}}$$
+The code below gives the expected results for all the control constants need to construct x-bar and x-individual charts. 
+```{r}
+
+c(N=2, d2 = d2, E2 = 3/d2, A2 = 3/(d2*sqrt(2)))
+```
+
+##R Bar Constants
+
+The constants for $\bar{R}$ are $d_3$ (1$\sigma$ around $\bar{R}$), D3 (Lower $3\sigma$ limit of $\bar{R}$) and D4 (Upper $3\sigma$ limit of $\bar{R}$). To get these constants, we start with the assumption that the standard deviation of $\bar{R}$ is proportional to the standard deviation of the x's. The proportionality constant is $d_3$ shown in **Eq.6**.
+
+$$(Eq.6) \ \ S(R_{Sub\_Grp\_Indv}) = d_{3}S(X_{Indv})$$
+
+```{r d3 without Pipes}
+set.seed(seed)
+d3 <- sd(replicate(reps, abs(diff(range(rnorm(2))))))
+d3  
+```
+
+
+Notice that the only difference between the calculation of $d_3$ and $d_2$ is that we use standard deviation rather than the mean of the $R_{Sub\_Grp\_Indv}$. Now we have $d_3$, but we need to do a little simple algebra to express the $S(R_{Sub\_Grp\_Indv})$ in terms of $\bar{R}$. Remember, historically the employee doesn't need to worry about standard deviation -- just ranges. We can define the above expression in term of $\bar{R}$ by combining **Eq.1** and **Eq.6**, yielding **Eq.7**.
+
+$$(Eq.7) \ \  S[R_{Sub\_Grp\_Indv}] = \frac{d_3\bar{R}(X_{Sub\_Grp\_Indv})}{d_{2}}$$
+
+OK almost to D3 and D4. The lower 3$\sigma$ limit of $\bar{R}$ can be expressed as Eq.8:
+
+$$(Eq.8) \ \ \bar{R}_{lwr\_Limit}=\bar{R} - \frac{3d_3\bar{R}(X_{Sub\_Grp\_Indv})}{d_{2}}$$
+
+Factoring out the $\bar{R}$ terms on the right-hand side of the expression yields 
+
+$$(Eq.9) \ \ \bar{R}_{lwr\_Limit}=\bar{R} \left( 1 - \frac{3d_3}{d_{2}} \right)$$
+
+The expression inside the parentheses is D3. D4, the upper limit of $\bar{R}$ is evaluated analogously. The only difference is a "+" sign in the final expression. Final expressions for D3 and D4 are:
+
+$$(Eq.10) \ \ D3 = 1 - \frac{3d_3}{d_{2}} \\ (Eq.11) \ \ D4 = 1 + \frac{3d_3}{d_{2}}$$
+
+All done! Here is the R code summarizing the constants for $\bar{R}$ using n=2.
+
+```{r}
+c(N  = 2, 
+  d3 = d3,
+  D3 = ifelse(1 - 3*d3/d2 < 0, 0, 1 - 3*d3/d2), 
+  D4 = 1 + 3*d3/d2
+  )
+```
+
+
+Notice for D3 the value is 0, this is because the value calculated was less than 0. Such values are rounded to zero per the R code above.
+
+#Summary
+In this post, we show how to estimate, via Monte Carlo methods, the control chart constants needed to produce x-individuals, x-bar, and R charts. All the constants together are shown below. In addition, the constants for n = 7 have also been presented. 
+
+
+
+```{r Constant Summary}
+set.seed(5555)
+FUN_d2 <- function(x) {mean(replicate(reps, abs(diff(range(rnorm(x))))))}
+FUN_d3 <- function(x) {sd(replicate(reps, abs(diff(range(rnorm(x))))))}
+
+Ns <- c(2,7)
+d2 <- sapply(Ns, FUN_d2)
+d3 <- sapply(Ns, FUN_d3)
+ 
+round(data.frame(
+  N = Ns,
+  d2 = d2,  
+  E2 = 3/d2, 
+  A2 = 3/(d2*sqrt(Ns)),
+  d3 = d3,
+  D3 = ifelse(1 - 3*d3/d2 < 0, 0, 1 - 3*d3/d2), 
+  D4 = 1 + 3*d3/d2  
+  ), digits = 3)
+
+```
+
+
+
+
+
