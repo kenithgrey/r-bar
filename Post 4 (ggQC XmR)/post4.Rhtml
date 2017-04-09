@@ -12,10 +12,7 @@ XbarR charts are useful when monitoring a continuous process over time and your 
 
 In this post, we will show how to make quick QC XbarR plots with the ggQC package available on cran or github.
 
-<pre>
-  cran: install.package("ggQC")
-  github: devtools::install_github("kenithgrey/ggQC")
-</pre>
+<pre>cran: install.package("ggQC")</pre>
 
 Generating an Xbar or XbarR plot with ggQC is simple. To get us started, let's simulate some production line data on candles. The candles are shaped using a mold capable of producing 4 units a cycle. Each cycle takes an hour. Thus in a 24 hour period, the process would yield 96 candles. The parameter being tracked is candle width.
 <h2><b>Simulate Some Data</b></h2>

@@ -8,15 +8,20 @@ output:
 require(ggplot2)
 ```
 
-Having used R for some years now, I've come across a few instances where R's **Inf** keyword can be used to yield a practical outcome. For those unfamiliar with R's **Inf** keyword, it is defined as $\pm$ a number divided by zero, respectively yielding $\pm$ **Inf**.
+Having used R for some years now, I've come across a few instances where R's **Inf** keyword can be used to yield a practical outcome. For those unfamiliar with R's **Inf** keyword, it is defined as postive or negative a number divided by zero, respectively yielding postive or negative **Inf**.
 
 ```{r definition of Inf}
 c(plus_inf = 1/0, minus_inf = -1/0)
+
 ```
 
-Great, so how we can make practical use of infinity in R code? Two applications I've found are in R's *cut()* function and positioning text in ggplot at a corner or edge.
+Great, so how we can make practical use of infinity in R code? Three applications I've found are in R's 
 
-#**Inf** in the *cut()* Function 
+  1. *cut()* function for upper and lower limits.
+  1. *ggplot2::annotate()* positioning text in ggplot at a corner or edge.
+  1. *integrate()* function when setting the upper and lower integral bounds
+
+#**Inf** in the *cut()* Function# 
 
 Suppose you have a set of numbers and you want to bin them into discrete levels. For example, take the sequence {-100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000} and bin them into a factor with 5 levels.
 
@@ -45,8 +50,14 @@ xtabs(~bins)
 
 Now, when new data is collected that is less than -2 or greater than 11 there will be a bin to catch it, no mater how big or small. 
 
+#**Inf** in integrate function - upper and lower bounds#
 
-#Anchoring ggplot text at plot corners and edges with **Inf** 
+```{r}
+dn <- function(x){dnorm(x = x, mean = 0, sd = 1)}
+integrate(dn, -Inf,  c(1,0))
+```
+
+#**Inf** in the ggplot2::annotate function - text positioning#  
 
 In the documentation for ggplot2 http://docs.ggplot2.org/current/geom_text.html <end of page> you are told you can position text in a plot in the following way.   
 
@@ -72,17 +83,17 @@ Oops. The text is no longer in the corners. Using R's **Inf** keyword, we can ac
 ```{r Using Inf to lock text at edges}
 gg_corner_edge_text <- ggplot(df, aes(x,y)) +  
   annotate("text", label="Top Left",  x = -Inf, y=Inf, hjust=0, vjust=1) +
-  annotate("text", label="Bottom Left",  x = -Inf, y=-Inf, hjust=0, vjust=0)+
+  annotate("text", label="Bottom Left",  x = -Inf, y=-Inf, hjust=0, vjust=0) +
   annotate("text", label="Top Right",  x = Inf, y=Inf, hjust=1, vjust=1) +
-  annotate("text", label="Bottom Right",  x = Inf, y=-Inf, hjust=1.1, vjust=-.7) +
-  
-  #### Placeing text at Top or Bottom Givben X 
-  annotate("text", label="Top Middle",  x=(max(df$x)+min(df$x))/2 , y=Inf, hjust=.5, vjust=1) +
-  annotate("text", label="Bottom Middle",  x=(max(df$x)+min(df$x))/2 , y=-Inf, hjust=.5, vjust=-.7) +  
+   annotate("text", label="Bottom Right",  x = Inf, y=-Inf, hjust=1.1, vjust=-.7) +
 
-  #### Placeing text at Left or Right Side Given Y 
+  #### Placeing text at Top or Bottom Givben X
+  annotate("text", label="Top Middle",  x=(max(df$x)+min(df$x))/2 , y=Inf, hjust=.5, vjust=1) +
+  annotate("text", label="Bottom Middle",  x=(max(df$x)+min(df$x))/2 , y=-Inf, hjust=.5, vjust=-.7) +
+
+  #### Placeing text at Left or Right Side Given Y
   annotate("text", label="Right Middle", x=Inf , y=(max(df$y)+min(df$y))/2, hjust=.5, vjust=1, angle=-90) +
-  annotate("text", label="Left Middle",  x=-Inf , y=(max(df$y)+min(df$y))/2, hjust=.5, vjust=1, angle=90) 
+  annotate("text", label="Left Middle",  x=-Inf , y=(max(df$y)+min(df$y))/2, hjust=.5, vjust=1, angle=90)
 
 gg_corner_edge_text
 ```
