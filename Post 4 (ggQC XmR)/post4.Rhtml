@@ -1,0 +1,143 @@
+<!-- 
+Post set for April 19th, 2017
+* This images for this post can be found in the vignettes for the ggQC package. 
+-->
+
+XbarR charts are useful when monitoring a continuous process over time and your taking multiple samples in a given period. Some examples might include,
+<ul>
+ 	<li>the first, middle, and last parts coming off an assembly line,</li>
+ 	<li>subgroups of molded parts produced several at a time over several cycles,</li>
+ 	<li>batch uniformity of continuously produced chemical / material.</li>
+</ul>
+
+In this post, we will show how to make quick QC XbarR plots with the ggQC package available on cran or github.
+
+<pre>
+  cran: install.package("ggQC")
+  github: devtools::install_github("kenithgrey/ggQC")
+</pre>
+
+Generating an Xbar or XbarR plot with ggQC is simple. To get us started, let's simulate some production line data on candles. The candles are shaped using a mold capable of producing 4 units a cycle. Each cycle takes an hour. Thus in a 24 hour period, the process would yield 96 candles. The parameter being tracked is candle width.
+<h2><b>Simulate Some Data</b></h2>
+The code block below, generates the candle width data we are going to use to work with ggQC. Here we are generating data for the 4 mold cells. Three of the mold cells are performing normally, one of the mold cells is not.
+<pre class="prettyprint lang-r" data-start-line="1" data-visibility="visible" data-highlight="" data-caption="">set.seed(5555)
+candle_df1t3 &lt;- data.frame(
+                Cycle = as.factor(rep(1:24, each=3)),
+                candle_width = rnorm(n = 3*24, mean = 10, sd = 1),
+                mold_cell = as.ordered(rep(1:3))
+             ) 
+
+candle_df4 &lt;- data.frame(
+                Cycle = as.factor(rep(1:24, each=1)),
+                candle_width = rnorm(n = 1*24, mean = 11, sd = 2),
+                mold_cell = as.ordered(rep(4, each=24))
+             )
+
+candle_df &lt;- rbind(candle_df1t3, candle_df4)
+</pre>
+<h2><b>Simple XbarR Plot</b></h2>
+Making a plot with ggQC and ggplot is simple
+
+<!-- -->
+<strong>NOTEs:</strong>
+<p style="padding-left: 30px;">Remember to set the group aesthetic equal to 1. Otherwise you will end up with far more control lines than you want.</p>
+<p style="padding-left: 30px;">XbarR is the default method for stat_QC and stat_QC_labels functions.</p>
+<!-- -->
+<pre class="prettyprint lang-r" data-start-line="1" data-visibility="visible" data-highlight="" data-caption="">library(ggplot2)
+library(ggQC)
+
+XbarR &lt;- ggplot(candle_df, aes(x = Cycle, y = candle_width, group = 1)) +
+         stat_summary(fun.y = mean, geom = "point") +
+         stat_summary(fun.y = mean, geom = "line") +
+         stat_QC() 
+
+XbarR
+</pre>
+<img class="alignleft size-large wp-image-148" src="http://r-bar.net/wp-content/uploads/2017/04/unnamed-chunk-2-1-1024x731.png" alt="" width="100%" height="100%" />
+
+Data looks to be in good control, but it would be nice to have the center line and control limits labeled before presenting it to the line manager.
+<h2><b>Labeled XbarR Plot</b></h2>
+<pre class="prettyprint lang-r" data-start-line="1" data-visibility="visible" data-highlight="" data-caption="">XbarR + stat_QC_labels()
+</pre>
+<img class="alignleft size-large wp-image-148" src="http://r-bar.net/wp-content/uploads/2017/04/unnamed-chunk-3-1-1024x731.png" alt="" width="100%" height="100%" />
+
+&nbsp;
+
+Your line manager is happy to see the candles are being produced as intended, but would like to get a sense of the process consistency. For this you will need an R-Bar chart.
+<!-- -->
+<h2><b>R Bar Chart<b></b></b></h2>
+<!-- -->
+<pre class="prettyprint lang-r" data-start-line="1" data-visibility="visible" data-highlight="" data-caption="">R_Bar &lt;- ggplot(candle_df, aes(x = Cycle, y = candle_width, group = 1)) +
+         stat_summary(fun.y = QCrange, geom = "point") +
+         stat_summary(fun.y = QCrange, geom = "line") +
+         stat_QC(method="rBar") +
+         stat_QC_labels(method="rBar") + ylab("R-Bar")
+
+R_Bar
+</pre>
+<img class="alignleft size-large wp-image-148" src="http://r-bar.net/wp-content/uploads/2017/04/unnamed-chunk-4-1-1024x731.png" alt="" width="100%" height="100%" />
+
+The second run for the day was more inconsistent than usual, and the line manager lifts an eye brow. He has just received a customer complaint that some of the candles are too wide to fit in their candle holders. He asks if you can show the individuals on the plot and the natural control limits.
+
+<!-- -->
+<h2><b>XbarR with Individuals</b></h2>
+<!-- -->
+<pre class="prettyprint lang-r" data-start-line="1" data-visibility="visible" data-highlight="" data-caption="">XbarR &lt;- ggplot(candle_df, aes(x = Cycle, y = candle_width, group = 1)) + 
+         stat_summary(fun.y = mean, geom = "point") +
+         stat_summary(fun.y = mean, geom = "line") +
+         stat_QC() + stat_QC_labels() +
+         # Show Individuals  
+         geom_point(alpha= 1/5) +
+         stat_QC(n=1, color.qc_limits = "orange") + 
+         stat_QC_labels(n=1, color.qc_limits = "orange")   
+
+
+XbarR
+</pre>
+<img class="alignleft size-large wp-image-148" src="http://r-bar.net/wp-content/uploads/2017/04/unnamed-chunk-5-1-1024x731.png" alt="" width="100%" height="100%" />
+
+Orange lines show the 3sigma control limits for the individual samples. The line manager is surprised to see so many individuals' widths are over 13 units, and wants to know how a candle width of nearly 16 could occur. Leaving the conversation you are asked to examine the data as a function of the different cells in the mold.
+
+<!-- -->
+<h2><b>Colorizing the Data</b></h2>
+<!-- -->
+<pre class="prettyprint lang-r" data-start-line="1" data-visibility="visible" data-highlight="" data-caption="">XbarR &lt;- ggplot(candle_df, aes(x = Cycle, y = candle_width, group = 1, color=mold_cell)) + 
+         stat_summary(fun.y = mean, geom = "point") +
+         stat_summary(fun.y = mean, geom = "line") +
+         stat_QC() + stat_QC_labels() +
+         # Show Individuals  
+         geom_point(alpha= 1/2) +
+         stat_QC(n=1, color.qc_limits = "orange") + 
+         stat_QC_labels(n=1, color.qc_limits = "orange")   
+
+
+XbarR
+
+</pre>
+<img class="alignleft size-large wp-image-148" src="http://r-bar.net/wp-content/uploads/2017/04/unnamed-chunk-6-1-1024x731.png" alt="" width="100%" height="100%" />
+
+Mold Cell 4 (purple in the plot) looks a little suspicious. So you plot an XmR chart for each cell.
+
+<!-- -->
+<h2><b>Faceting</b></h2>
+<!-- -->
+<pre class="prettyprint lang-r" data-start-line="1" data-visibility="visible" data-highlight="" data-caption="">XmR &lt;- ggplot(candle_df, 
+      aes(x = Cycle, y = candle_width, group = 1, color = mold_cell)) +         
+         geom_point() + geom_line() +
+         stat_QC(method="XmR") + stat_QC_labels(method="XmR") +
+         facet_grid(.~mold_cell)
+
+
+XmR
+</pre>
+<img class="alignleft size-large wp-image-153" src="http://r-bar.net/wp-content/uploads/2017/04/unnamed-chunk-7-1-1024x602.png" alt="" width="100%" height="100%" />
+
+Nice work! Looks like we need to replace the mold.
+
+&nbsp;
+
+<hr />
+
+&nbsp;
+
+To learn more about ggQC or see more examples, visit <a href="http:\\ggqc.r-bar.net\" target="_blank">ggqc.r-bar.net</a>
