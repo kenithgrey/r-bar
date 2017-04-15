@@ -22,4 +22,6 @@ output: html_notebook
 10. split-plots/hierarchacle designs and quality control 
 11. Exercies?
 12. R's Inf function and ggplot
-13. making a stat for x-bar and r plots
+13. making a stat for x-bar and r plots (done I made ggQC)
+14. Puzzels from stackexchange
+15. details on ggplot scale_con, date, descrete,.... (show up often in SE)

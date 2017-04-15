@@ -8,22 +8,26 @@ output:
 require(ggplot2)
 ```
 
-Having used R for some years now, I've come across a few instances where R's **Inf** keyword can be used to yield a practical outcome. For those unfamiliar with R's **Inf** keyword, it is defined as postive or negative a number divided by zero, respectively yielding postive or negative **Inf**.
+Having used R for some years now, I've come across a few instances where R's **Inf** keyword can be used to yield a practical outcome. For those unfamiliar with R's **Inf** keyword, it is defined as a postive or negative number divided by zero yielding postive or negative **Inf**, respectively.
 
 ```{r definition of Inf}
 c(plus_inf = 1/0, minus_inf = -1/0)
 
 ```
 
-Great, so how we can make practical use of infinity in R code? Three applications I've found are in R's 
+So how we can make practical use of infinity in R? Here are a few applications I've found: 
 
-  1. *cut()* function for upper and lower limits.
+  1. *cut()* defining the upper and lower extremes.
   1. *ggplot2::annotate()* positioning text in ggplot at a corner or edge.
-  1. *integrate()* function when setting the upper and lower integral bounds
+  1. *integrate()* when setting the upper and lower integral bounds
 
-#**Inf** in the *cut()* Function# 
+#**Inf** with *cut()*# 
 
-Suppose you have a set of numbers and you want to bin them into discrete levels. For example, take the sequence {-100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000} and bin them into a factor with 5 levels.
+Suppose you want to bin the following set of numbers into five discrete levels.  
+
+<pre>{-100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000}</pre>  
+
+You might do something like, 
 
 ```{r using the cut() Function}
 numbers <- c(-100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000)
@@ -31,7 +35,7 @@ bins <- cut(numbers, breaks = c(-101,-2,2,5,11, 1001))
 xtabs(~bins)
 ```
 
-The above code explicitly shows how we might bin the data including the extrema (i.e, -100,100,1000). But If we are working with real data - extrama can change. For example, what if we received the following new pieces of data: -102 and 1002? Below, we've added them to our list and re-binned them into the 5 bins.  
+The above code explicitly shows how we might bin the data including the extreme values -100,100, and 1000. But with real data, extrama can change when new data is added. For example, what if we received the following new pieces of data: -102 and 1002? Below, we've added them to our list and re-binned them as before.  
 
 ```{r using the Cut Function Not Robust}
 numbers <- c(-102, -100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000,1002)
@@ -39,7 +43,9 @@ bins <- cut(numbers, breaks = c(-101,-2,2,5,11, 1001))
 xtabs(~bins)
 ```
 
-In the result above, you see that the new data were not included in the binning. We would need to manually expand our limits, or we could perhaps do something clever with the *max* and *min* functions. Alternativly, we can solve this problem with R's $\pm$ **Inf** keyword by placing $\pm$ **Inf** in the *breaks* argument of the *cut* function (*see line 2 below*)
+Opps! The new data was not included in the binning. We would need to manually expand our limits manually, or we could perhaps do something clever with the *max* and *min* functions. 
+
+Alternativly, we can solve this problem with R's $\pm$ **Inf** keyword by placing $\pm$ **Inf** in the *breaks* argument of the *cut* function (*see line 2 below*)
 
 
 ```{r using the Cut Function with Infs}
@@ -48,16 +54,37 @@ bins <- cut(numbers, breaks = c(-Inf,-2,2,5,11, Inf))
 xtabs(~bins)
 ```
 
-Now, when new data is collected that is less than -2 or greater than 11 there will be a bin to catch it, no mater how big or small. 
+Now, when new data is collected that is less than -2 or greater than 11 there will be a bin to catch it, no mater how big or how small. 
 
-#**Inf** in integrate function - upper and lower bounds#
+#**Inf** in integrate()#
+
+Integration is never fun, but sometimes its necessary. For example, to get the probability of a normally distributed event between two limits you would need to integrate the normal distribution density funciton between limits a and b. 
+
+$$
+f(x |\mu, \sigma^2) =  \frac{1}{\sqrt{2\pi\sigma^2}} e^{-\frac{(x - \mu)^2}{2\sigma^2}} \qquad \mathrm{Density \space Function \space(dnorm)} 
+\\
+P(x |\mu, \sigma^2) = \int\limits_a^b \frac{1}{\sqrt{2\pi\sigma^2}} e^{-\frac{(x - \mu)^2}{2\sigma^2}} \qquad \mathrm{Proability \space Function \space (pnorm)} 
+
+$$
+
+The total area under the Density Function should be 1. So if we integrate dnorm(x) from negative to positive infinity we should get 1. Let's see
 
 ```{r}
-dn <- function(x){dnorm(x = x, mean = 0, sd = 1)}
-integrate(dn, -Inf,  c(1,0))
+LongDF <- function(x, mu = 0 , sigma = 1){
+            1/sqrt(2*pi*sigma^2) * exp(-(x-mu)^2/(2*sigma^2))
+          }
+
+#dnorm and the long function are the same...
+#dnorm(0) == LongDF(0)
+#TRUE
+
+integrate(dnorm, -Inf,  Inf)
 ```
 
-#**Inf** in the ggplot2::annotate function - text positioning#  
+as expected the answer is 1. 
+
+
+#**Inf** in ggplot2::annotate() - text positioning#  
 
 In the documentation for ggplot2 http://docs.ggplot2.org/current/geom_text.html <end of page> you are told you can position text in a plot in the following way.   
 

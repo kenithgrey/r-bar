@@ -120,46 +120,56 @@ $(document).ready(function () {
 </div>
 
 
-<p>Having used R for some years now, I’ve come across a few instances where R’s <strong>Inf</strong> keyword can be used to yield a practical outcome. For those unfamiliar with R’s <strong>Inf</strong> keyword, it is defined as postive or negative a number divided by zero, respectively yielding postive or negative <strong>Inf</strong>.</p>
+<p>Having used R for some years now, I’ve come across a few instances where R’s <strong>Inf</strong> keyword can be used to yield a practical outcome. For those unfamiliar with R’s <strong>Inf</strong> keyword, it is defined as a postive or negative number divided by zero yielding postive or negative <strong>Inf</strong>, respectively.</p>
 <pre class="r"><code>c(plus_inf = 1/0, minus_inf = -1/0)</code></pre>
 <pre><code>##  plus_inf minus_inf 
 ##       Inf      -Inf</code></pre>
-<p>Great, so how we can make practical use of infinity in R code? Three applications I’ve found are in R’s</p>
+<p>So how we can make practical use of infinity in R? Here are a few applications I’ve found:</p>
 <ol style="list-style-type: decimal">
-<li><em>cut()</em> function for upper and lower limits.</li>
+<li><em>cut()</em> defining the upper and lower extremes.</li>
 <li><em>ggplot2::annotate()</em> positioning text in ggplot at a corner or edge.</li>
-<li><em>integrate()</em> function when setting the upper and lower integral bounds</li>
+<li><em>integrate()</em> when setting the upper and lower integral bounds</li>
 </ol>
-<div id="inf-in-the-cut-function" class="section level1">
-<h1><strong>Inf</strong> in the <em>cut()</em> Function</h1>
-<p>Suppose you have a set of numbers and you want to bin them into discrete levels. For example, take the sequence {-100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000} and bin them into a factor with 5 levels.</p>
+<div id="inf-with-cut" class="section level1">
+<h1><strong>Inf</strong> with <em>cut()</em></h1>
+<p>Suppose you want to bin the following set of numbers into five discrete levels.</p>
+<pre>{-100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000}</pre>
+<p>You might do something like,</p>
 <pre class="r"><code>numbers &lt;- c(-100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000)
 bins &lt;- cut(numbers, breaks = c(-101,-2,2,5,11, 1001))
 xtabs(~bins)</code></pre>
 <pre><code>## bins
 ##  (-101,-2]     (-2,2]      (2,5]     (5,11] (11,1e+03] 
 ##          1          7          3          3          2</code></pre>
-<p>The above code explicitly shows how we might bin the data including the extrema (i.e, -100,100,1000). But If we are working with real data - extrama can change. For example, what if we received the following new pieces of data: -102 and 1002? Below, we’ve added them to our list and re-binned them into the 5 bins.</p>
+<p>The above code explicitly shows how we might bin the data including the extreme values -100,100, and 1000. But with real data, extrama can change when new data is added. For example, what if we received the following new pieces of data: -102 and 1002? Below, we’ve added them to our list and re-binned them as before.</p>
 <pre class="r"><code>numbers &lt;- c(-102, -100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000,1002)
 bins &lt;- cut(numbers, breaks = c(-101,-2,2,5,11, 1001))
 xtabs(~bins)</code></pre>
 <pre><code>## bins
 ##  (-101,-2]     (-2,2]      (2,5]     (5,11] (11,1e+03] 
 ##          1          7          3          3          2</code></pre>
-<p>In the result above, you see that the new data were not included in the binning. We would need to manually expand our limits, or we could perhaps do something clever with the <em>max</em> and <em>min</em> functions. Alternativly, we can solve this problem with R’s <span class="math inline">\(\pm\)</span> <strong>Inf</strong> keyword by placing <span class="math inline">\(\pm\)</span> <strong>Inf</strong> in the <em>breaks</em> argument of the <em>cut</em> function (<em>see line 2 below</em>)</p>
+<p>Opps! The new data was not included in the binning. We would need to manually expand our limits manually, or we could perhaps do something clever with the <em>max</em> and <em>min</em> functions.</p>
+<p>Alternativly, we can solve this problem with R’s <span class="math inline">\(\pm\)</span> <strong>Inf</strong> keyword by placing <span class="math inline">\(\pm\)</span> <strong>Inf</strong> in the <em>breaks</em> argument of the <em>cut</em> function (<em>see line 2 below</em>)</p>
 <pre class="r"><code>numbers &lt;- c(-102, -100, -1,1,1,1,2,2,2,5,5,5,10,10,10,100,1000,1002)
 bins &lt;- cut(numbers, breaks = c(-Inf,-2,2,5,11, Inf))
 xtabs(~bins)</code></pre>
 <pre><code>## bins
 ## (-Inf,-2]    (-2,2]     (2,5]    (5,11] (11, Inf] 
 ##         2         7         3         3         3</code></pre>
-<p>Now, when new data is collected that is less than -2 or greater than 11 there will be a bin to catch it, no mater how big or small.</p>
+<p>Now, when new data is collected that is less than -2 or greater than 11 there will be a bin to catch it, no mater how big or how small.</p>
 </div>
-<div id="inf-in-integrate-function---upper-and-lower-bounds" class="section level1">
-<h1><strong>Inf</strong> in integrate function - upper and lower bounds</h1>
+<div id="inf-in-integrate" class="section level1">
+<h1><strong>Inf</strong> in integrate()</h1>
+<p>Integration is never fun, but sometimes its necessary. For example to get the probability of a normally distributed event between two limits you would need to integration the normal distribution funciton shown below.</p>
+<p><span class="math display">\[
+f(x |\mu, \sigma^2) =  \frac{1}{\sqrt{2\pi\sigma^2}} e^{-\frac{x - \mu}^2{2\sigma^2}}
+\]</span></p>
+<pre class="r"><code>dn &lt;- function(x){dnorm(x = x, mean = 0, sd = 1)}
+integrate(dn, -Inf,  c(0.5))</code></pre>
+<pre><code>## 0.6914625 with absolute error &lt; 1.6e-09</code></pre>
 </div>
-<div id="inf-in-the-ggplot2annotate-function---text-positioning" class="section level1">
-<h1><strong>Inf</strong> in the ggplot2::annotate function - text positioning</h1>
+<div id="inf-in-ggplot2annotate---text-positioning" class="section level1">
+<h1><strong>Inf</strong> in ggplot2::annotate() - text positioning</h1>
 <p>In the documentation for ggplot2 <a href="http://docs.ggplot2.org/current/geom_text.html" class="uri">http://docs.ggplot2.org/current/geom_text.html</a> <end of page> you are told you can position text in a plot in the following way.</p>
 <pre class="r"><code>df &lt;- data.frame(
   x = c(1, 1, 2, 2),
